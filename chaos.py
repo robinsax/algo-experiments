@@ -1,8 +1,4 @@
-import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
-
-from algoexperiments import Dataset, Trader, NotAllowed, InvalidSample, Simulation
+from core import Dataset, Trader, NotAllowed, InvalidSample, Simulation
 
 dataset = Dataset()
 
@@ -11,10 +7,10 @@ class Chaos(Trader):
     def step(self, timepoint):
         import random
 
-        buy = len(self.portfolio) == 0 or random.choice((True, False))
+        buy = len(self.portfolio.equities) == 0 or random.choice((True, False))
         ticker_choices = dataset.tickers
         if not buy:
-            ticker_choices = list(self.portfolio.keys())
+            ticker_choices = self.portfolio.get_holdings()
 
         ticker = ticker_choices[random.randint(0, len(ticker_choices) - 1)]
 
@@ -29,4 +25,4 @@ class Chaos(Trader):
             pass
 
 simulation = Simulation(dataset, Chaos(), 1)
-simulation.run(1000)
+simulation.run(10000)

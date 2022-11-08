@@ -4,6 +4,7 @@ import math
 
 from datetime import datetime, timedelta
 
+class BeginningOfTime(BaseException): pass
 class EndOfTime(BaseException): pass
 class InvalidSample(BaseException): pass
 
@@ -33,6 +34,23 @@ class Timepoint:
                     raise EndOfTime()
                 while str(when.date()) not in self.dataset.open_days:
                     when += timedelta(days=day_step)
+
+        return Timepoint(self.dataset, str(when.date()), start)
+
+    def __sub__(self, steps):
+        day_step = 1 if steps > 0 else -1
+        when = self.when
+        start = self.start
+        for i in range(abs(steps)):
+            if start:
+                start = False
+            else:
+                start = True
+                when -= timedelta(days=day_step)
+                if str(when.date()) == self.dataset.first_day:
+                    raise BeginningOfTime()
+                while str(when.date()) not in self.dataset.open_days:
+                    when -= timedelta(days=day_step)
 
         return Timepoint(self.dataset, str(when.date()), start)
 

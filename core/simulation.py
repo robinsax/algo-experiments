@@ -1,13 +1,17 @@
 from .dataset import EndOfTime
+from .portfolio import Portfolio
 
 class NotAllowed(BaseException): pass
 
 class Trader:
     
     def __init__(self):
-        self.portfolio = dict()
+        self.portfolio = Portfolio()
         self.cash = 0
         self.market = None
+
+        self.fee = 0
+        self.dataset = None
 
         self._buys = 0
         self._sells = 0
@@ -22,23 +26,24 @@ class Simulation:
         self.trader = trader
         self.trade_fee = trade_fee
 
+        self.trader.fee = trade_fee
+        self.trader.dataset = dataset
+
         self._current_time = None
 
     def buy(self, ticker, amount):
-        cost = (
-            (self.dataset.sample(ticker, self._current_time).price * amount) +
-            self.trade_fee
-        )
+        price = self.dataset.sample(ticker, self._current_time).price
+        cost = (price * amount) + self.trade_fee
         if cost > self.trader.cash:
             raise NotAllowed()
 
         self.trader._buys += 1
-        self.trader.cash -= cost
-        self.trader.portfolio[ticker] = amount + self.trader.portfolio.get(ticker, 0)
+        self.trader.cash -= cost        
+        self.trader.portfolio.update("buy", ticker, amount, price)
 
     def sell(self, ticker, amount):
-        if amount > self.trader.portfolio[ticker]:
-            raise NotAllowed()
+        self.trader.portfolio.update("sell", ticker, amount)
+
         value = (
             (self.dataset.sample(ticker, self._current_time).price * amount) -
             self.trade_fee
@@ -46,7 +51,6 @@ class Simulation:
 
         self.trader._sells += 1
         self.trader.cash += value
-        self.trader.portfolio[ticker] -= amount
 
     def run(self, trader_cash):
         self.trader.cash = trader_cash
@@ -67,13 +71,7 @@ class Simulation:
 
         print('last day: %s'%self._current_time)
 
-        final_value = self.trader.cash
-        for ticker in self.trader.portfolio:
-            amount = self.trader.portfolio[ticker]
-            if amount > 0:
-                value = amount * self.dataset.sample(ticker, self._current_time).price
-                final_value += value
-                print('holding %d %s, value: %.2f'%(amount, ticker, value))
+        final_value = self.trader.cash + self.trader.portfolio.value(self._current_time, self.dataset)
 
         print('final value: %.2f'%final_value)
         print('%d buys and %d sells'%(self.trader._buys, self.trader._sells))
